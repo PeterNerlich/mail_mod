@@ -131,7 +131,7 @@ function mail.show_contacts(name)
 		for i = 1, freqlength do
 			table.insert(freqnames, freq[i].key)
 		end
-		formspec = formspec .. mail.compile_contact_list(name, selected_idxs.contacts[name], freqnames)
+		formspec = formspec .. mail.compile_contact_list(name, nil, freqnames)
 		-- remove last char (that closes the table) and add a seperation row
 		formspec = formspec:sub(1, #formspec-1) .. ",,,"
 	end
@@ -169,8 +169,23 @@ function mail.show_edit_contact(name, contact_name, note, illegal_name_hint)
 end
 
 function mail.show_select_contact(name, to, cc, bcc)
+	local freq = mail.calculate_frequent_contacts(name, true)
+	local freqlength = math.min(#freq, mail.max_frequent_contacts_displayed)	-- display at most n frequent contacts
+
 	local formspec = mail.select_contact_formspec
-	local contacts = mail.compile_contact_list(name, selected_idxs.contacts[name])
+	local contacts = ""
+
+	if freqlength > 0 then
+		local freqnames = {}
+		for i = 1, freqlength do
+			table.insert(freqnames, freq[i].key)
+		end
+		contacts = contacts .. mail.compile_contact_list(name, nil, freqnames)
+		-- remove last char (that closes the table) and add a seperation row
+		contacts = contacts:sub(1, #contacts-1) .. ",,,"
+	end
+
+	contacts = contacts .. mail.compile_contact_list(name, selected_idxs.contacts[name], nil, freqlength+1)
 
 	-- compile lists
 	if to then
@@ -553,13 +568,31 @@ function mail.handle_receivefields(player, formname, fields)
 			if fields[v.."add"] then
 				update = true
 				if selected_idxs.contacts[name] then
-					for k, contact, i in pairsByKeys(contacts) do
-						if k == selected_idxs.contacts[name] or i == selected_idxs.contacts[name] then
-							local list = mail.parse_player_list(draft[v])
-							list[#list+1] = contact.name
-							selected_idxs[v][name] = #list
-							draft[v] = mail.concat_player_list(list)
-							break
+					local freq = mail.calculate_frequent_contacts(name, true)
+					local freqlength = math.min(#freq, mail.max_frequent_contacts_displayed)
+
+					if type(selected_idxs.contacts[name]) ~= "string" and selected_idxs.contacts[name] <= freqlength then
+						for i,c in pairs(freq) do
+							if c.key == selected_idxs.contacts[name] or i == selected_idxs.contacts[name] then
+								print("we match "..c.key.." from frequent contacts!")
+								local list = mail.parse_player_list(draft[v])
+								list[#list+1] = contacts[c.key].name
+								selected_idxs[v][name] = #list
+								draft[v] = mail.concat_player_list(list)
+								break
+							end
+						end
+					else
+						selected_idxs.contacts[name] = selected_idxs.contacts[name] - 1 - freqlength	-- there was another row inbetween
+						for k,c,i in pairsByKeys(contacts) do
+							if k == selected_idxs.contacts[name] or i == selected_idxs.contacts[name] then
+								print("we match "..k.." from all contacts!")
+								local list = mail.parse_player_list(draft[v])
+								list[#list+1] = c.name
+								selected_idxs[v][name] = #list
+								draft[v] = mail.concat_player_list(list)
+								break
+							end
 						end
 					end
 				end
