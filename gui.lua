@@ -120,7 +120,22 @@ function mail.show_inbox(name)
 end
 
 function mail.show_contacts(name)
-	local formspec = mail.contacts_formspec .. mail.compile_contact_list(name, selected_idxs.contacts[name])
+	local freq = mail.calculate_frequent_contacts(name, true)
+	local freqlength = math.min(#freq, mail.max_frequent_contacts_displayed)	-- display at most n frequent contacts
+
+	local formspec = mail.contacts_formspec
+
+	if freqlength > 0 then
+		local freqnames = {}
+		for i = 1, freqlength do
+			table.insert(freqnames, freq[i].key)
+		end
+		formspec = formspec .. mail.compile_contact_list(name, selected_idxs.contacts[name], freqnames)
+		-- remove last char (that closes the table) and add a seperation row
+		formspec = formspec:sub(1, #formspec-1) .. ",,,"
+	end
+
+	formspec = formspec .. mail.compile_contact_list(name, selected_idxs.contacts[name], nil, freqlength+1)
 	minetest.show_formspec(name, "mail:contacts", formspec)
 end
 
@@ -176,10 +191,13 @@ function mail.show_select_contact(name, to, cc, bcc)
 	minetest.show_formspec(name, "mail:selectcontact", formspec)
 end
 
-function mail.compile_contact_list(name, selected, playernames)
+function mail.compile_contact_list(name, selected, playernames, offset)
 	-- TODO: refactor this - not just compiles *a* list, but *the* list for the contacts screen (too inflexible)
 	local formspec = {}
 	local contacts = mail.getContacts(name)
+	if offset == nil then
+		offset = 0
+	end
 
 	if playernames == nil then
 		local length = 0
@@ -205,11 +223,11 @@ function mail.compile_contact_list(name, selected, playernames)
 		if length > 0 then
 			if selected and type(selected) == "number" then
 				formspec[#formspec + 1] = ";"
-				formspec[#formspec + 1] = tostring(selected + 1)
+				formspec[#formspec + 1] = tostring(selected + 1 + offset)
 			end
 			formspec[#formspec + 1] = "]"
 		else
-			formspec[#formspec + 1] = "]label[2,4.5;No contacts]"
+			formspec[#formspec + 1] = "]label[1.5,4.5;No contacts]"
 		end
 	else
 		if type(playernames) == "string" then
@@ -241,7 +259,7 @@ function mail.compile_contact_list(name, selected, playernames)
 		end
 		if #playernames > 0 and selected and type(selected) == "number" then
 			formspec[#formspec + 1] = ";"
-			formspec[#formspec + 1] = tostring(selected + 1)
+			formspec[#formspec + 1] = tostring(selected + 1 + offset)
 		end
 		formspec[#formspec + 1] = "]"
 	end

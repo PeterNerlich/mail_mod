@@ -10,6 +10,8 @@ mail = {
 	maildir = minetest.get_worldpath().."/mails",
 	contactsdir = minetest.get_worldpath().."/mails/contacts",
 
+	max_frequent_contacts_displayed = 4,
+
 	-- allow item/node attachments
 	allow_attachments = minetest.settings:get("mail.allow_attachments") == "true",
 
@@ -27,6 +29,7 @@ mail = {
 
 
 local MP = minetest.get_modpath(minetest.get_current_modname())
+dofile(MP .. "/util/misc.lua")
 dofile(MP .. "/util/normalize.lua")
 dofile(MP .. "/chatcommands.lua")
 dofile(MP .. "/migrate.lua")
