@@ -35,6 +35,7 @@ mail.contacts_formspec = "size[8,9;]" .. theme .. [[
 		button[6,0.10;2,0.5;new;New]
 		button[6,0.85;2,0.5;edit;Edit]
 		button[6,1.60;2,0.5;delete;Delete]
+		button[6,5.00;2,0.5;compose;Compose]
 		button[6,8.25;2,0.5;back;Back]
 		tablecolumns[color;text;text]
 		table[0,0;5.75,9;contacts;#999,Name,Note]]
@@ -332,7 +333,7 @@ end
 function mail.reply(name, message)
 	mail.ensure_new_format(message)
 	local replyfooter = "Type your reply here.\n\n--Original message follows--\n" ..message.body
-	mail.show_compose(name, message.sender, "Re: "..message.subject, replyfooter)
+	mail.show_compose(name, message.sender, "Re: "..message.subject, replyfooter, nil, name)
 end
 
 function mail.replyall(name, message)
@@ -363,12 +364,12 @@ function mail.replyall(name, message)
 	end
 	cc = mail.concat_player_list(cc)
 
-	mail.show_compose(name, recipients, "Re: "..message.subject, replyfooter, cc)
+	mail.show_compose(name, recipients, "Re: "..message.subject, replyfooter, cc, name)
 end
 
 function mail.forward(name, message)
 	local fwfooter = "Type your message here.\n\n--Original message follows--\n" ..message.body
-	mail.show_compose(name, "", "Fw: "..message.subject, fwfooter)
+	mail.show_compose(name, nil, "Fw: "..message.subject, fwfooter, nil, name)
 end
 
 function mail.handle_receivefields(player, formname, fields)
@@ -436,7 +437,7 @@ function mail.handle_receivefields(player, formname, fields)
 			return true
 
 		elseif fields.new then
-			mail.show_compose(name)
+			mail.show_compose(name, nil, nil, nil, nil, name)
 
 		elseif fields.contacts then
 			mail.show_contacts(name)
@@ -599,11 +600,30 @@ function mail.handle_receivefields(player, formname, fields)
 		local contacts = mail.getContacts(name)
 
 		if fields.contacts then
+			-- delete previous solection so we don't use a stale selection if a separator row is hit
+			selected_idxs.contacts[name] = nil
+
+			local freq = mail.calculate_frequent_contacts(name, true)
+			local freqlength = math.min(#freq, mail.max_frequent_contacts_displayed)
+
 			local evt = minetest.explode_table_event(fields.contacts)
-			for k,c,i in pairsByKeys(contacts) do
-				if i == evt.row - 1 then
-					selected_idxs.contacts[name] = k
-					break
+
+			if evt.row - 1 <= freqlength then
+				for i,v in pairs(freq) do
+					if i == evt.row - 1 then
+						print("we match "..v.key.." from frequent contacts!")
+						selected_idxs.contacts[name] = v.key
+						break
+					end
+				end
+			else
+				evt.row = evt.row - 1 - freqlength	-- there was another row inbetween
+				for k,c,i in pairsByKeys(contacts) do
+					if i == evt.row - 1 then
+						print("we match "..k.." from all contacts!")
+						selected_idxs.contacts[name] = k
+						break
+					end
 				end
 			end
 			if evt.type == "DCL" and contacts[selected_idxs.contacts[name]] then
@@ -641,6 +661,8 @@ function mail.handle_receivefields(player, formname, fields)
 			end
 
 			mail.show_contacts(name)
+		elseif fields.compose then
+			mail.show_compose(name, contacts[selected_idxs.contacts[name]].name)
 
 		elseif fields.back then
 			mail.show_inbox(name)
