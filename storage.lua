@@ -36,25 +36,6 @@ mail.getContacts = function(playername)
 	return mail.read_json_file(mail.getContactsFile(playername))
 end
 
-function pairsByKeys(t, f)
-	-- http://www.lua.org/pil/19.3.html
-	local a = {}
-	for n in pairs(t) do table.insert(a, n) end
-	table.sort(a, f)
-	local i = 0		-- iterator variable
-	local iter = function()		-- iterator function
-		i = i + 1
-		if a[i] == nil then
-			return nil
-		else
-			--return a[i], t[a[i]]
-			-- add the current position and the length for convenience
-			return a[i], t[a[i]], i, #a
-		end
-	end
-	return iter
-end
-
 mail.setContacts = function(playername, contacts)
 	if mail.write_json_file(mail.getContactsFile(playername), contacts) then
 		return true
