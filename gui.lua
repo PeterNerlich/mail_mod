@@ -28,8 +28,8 @@ mail.inbox_formspec = "size[8,9;]" .. theme .. [[
 		button[6,7.40;2,0.5;about;About]
 		button_exit[6,8.45;2,0.5;quit;Close]
 
-		tablecolumns[color;text;text]
-		table[0,0;5.75,9;messages;#999,From,Subject]]
+		tablecolumns[color;text;text;text]
+		table[0,0;5.75,9;messages;#999,,From,Subject]]
 
 mail.contacts_formspec = "size[8,9;]" .. theme .. [[
 		button[6,0.10;2,0.5;new;New]
@@ -75,6 +75,7 @@ end
 function mail.show_inbox(name)
 	local formspec = { mail.inbox_formspec }
 	local messages = mail.getMessages(name)
+	local now = os.time()
 
 	message_drafts[name] = nil
 
@@ -94,6 +95,8 @@ function mail.show_inbox(name)
 					formspec[#formspec + 1] = ","
 				end
 			end
+			formspec[#formspec + 1] = ","
+			formspec[#formspec + 1] = minetest.formspec_escape(mail.pretty_duration(now - message.time))
 			formspec[#formspec + 1] = ","
 			formspec[#formspec + 1] = minetest.formspec_escape(message.sender)
 			formspec[#formspec + 1] = ","
@@ -288,10 +291,11 @@ function mail.show_message(name, msgnumber)
 	local formspec = [[
 			size[8,9]
 			button[7.25,0;0.75,0.5;back;X]
-			label[0,0;From: %s]
-			label[0,0.4;To: %s]
-			label[0,0.8;CC: %s]
-			label[0,1.3;Subject: %s]
+			label[0,0;From:  %s]
+			label[0,0.4;To:  %s]
+			label[0,0.8;CC:  %s]
+			label[3,0;Date:  %s]
+			label[0,1.3;Subject:  %s]
 			textarea[0.25,1.8;8,7.8;body;;%s]
 			button[0,8.5;2,1;reply;Reply]
 			button[2,8.5;2,1;replyall;Reply All]
@@ -302,9 +306,10 @@ function mail.show_message(name, msgnumber)
 	local from = minetest.formspec_escape(message.sender)
 	local to = minetest.formspec_escape(message.to)
 	local cc = minetest.formspec_escape(message.cc)
+	local date = minetest.formspec_escape(mail.pretty_date(message.time, true))
 	local subject = minetest.formspec_escape(message.subject)
 	local body = minetest.formspec_escape(message.body)
-	formspec = string.format(formspec, from, to, cc, subject, body)
+	formspec = string.format(formspec, from, to, cc, date, subject, body)
 
 	if message.unread then
 		message.unread = false

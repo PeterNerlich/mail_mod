@@ -60,6 +60,62 @@ function mail.calculate_frequent_contacts(name, only_show_contacts)
 	return out
 end
 
+function mail.pretty_date(timestamp, trim_if_recent)
+	-- convert timestamp to table in local time
+	local ts_tab = os.date("*t", timestamp)
+
+	if trim_if_recent then
+		local ago = os.time() - timestamp
+		timestamp = os.time(ts_tab)	-- make display local time for os.date()
+
+		if ago >= 0 then
+			local now_tab = os.date("*t")
+			now_tab.sec = 0
+			now_tab.min = 0
+			now_tab.hour = 0
+			if timestamp >= os.time(now_tab) then
+				return os.date("%H:%M", timestamp)
+			else
+				now_tab.day = 1
+				now_tab.month = 1
+				if timestamp >= os.time(now_tab) then
+					return os.date("%d.%m. %H:%M", timestamp)
+				end
+			end
+		end
+	end
+
+	return os.date("%d.%m.%Y %H:%M:%S", timestamp)
+end
+
+function mail.pretty_duration(seconds)
+	if seconds < 60 then
+		return seconds .. " sec"
+	elseif seconds < 60*60 then
+		return math.floor(0.5 + seconds/60) .. " min"
+
+	elseif seconds < 60*60*2 then
+		return math.floor(0.5 + seconds/60/60) .. " hour"
+	elseif seconds < 60*60*24 then
+		return math.floor(0.5 + seconds/60/60) .. " hrs"
+
+	elseif seconds < 60*60*24 * 2 then
+		return math.floor(0.5 + seconds/60/60/24) .. " day"
+	elseif seconds < 60*60*24 * 30 then
+		return math.floor(0.5 + seconds/60/60/24) .. " days"
+
+	elseif seconds < 60*60*24 *30 *2 then
+		return math.floor(0.5 + seconds/60/60/24 /30) .. " month"
+	elseif seconds < 60*60*24 *30 *12 then
+		return math.floor(0.5 + seconds/60/60/24 /30) .. " months"
+
+	elseif seconds < 60*60*24 *30 *12 *2 then
+		return math.floor(0.5 + seconds/60/60/24 /30 /12) .. " year"
+	else
+		return math.floor(0.5 + seconds/60/60/24 /30 /12) .. " yrs"
+	end
+end
+
 function pairsByKeys(t, f)
 	-- http://www.lua.org/pil/19.3.html
 	local a = {}
